@@ -34,13 +34,21 @@ public class RestrictionFilter implements Filter {
 	 */
 	public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
 
+        /* Cast des objets request et response */
 		HttpServletRequest request = (HttpServletRequest) req;
 		HttpServletResponse response = (HttpServletResponse) res;		
+
+        /* Non-filtrage des ressources statiques */
+		String chemin = request.getRequestURI().substring(request.getContextPath().length());
+		if (chemin.startsWith("/inc")) {
+			chain.doFilter(request, response);
+		}
 		
+        /* Récupération de la session depuis la requête */
 		HttpSession session = request.getSession();
 		
 		if (session.getAttribute(ATT_SESSION_USER)==null) {
-			response.sendRedirect(request.getContextPath()+ACCES_CONNEXION);
+			//response.sendRedirect(request.getContextPath()+ACCES_CONNEXION);
 			request.getRequestDispatcher(ACCES_CONNEXION).forward(request, response);
 		} else {
 			chain.doFilter(request, response);
