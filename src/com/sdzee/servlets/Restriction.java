@@ -14,7 +14,7 @@ import javax.servlet.http.HttpSession;
 @WebServlet("/restriction")
 public class Restriction extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-
+	
 	public static final String ACCES_PUBLIC = "/accesPublic.jsp";
 	public static final String ACCES_RESTREINT = "/WEB-INF/accesRestreint.jsp";
 	public static final String ATT_SESSION_USER = "sessionUtilisateur";
