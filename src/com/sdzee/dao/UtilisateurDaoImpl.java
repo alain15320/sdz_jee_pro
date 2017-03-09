@@ -1,6 +1,7 @@
 package com.sdzee.dao;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -17,6 +18,16 @@ public class UtilisateurDaoImpl implements UtilisateurDao {
 			preparedStatement.setObject(i+1, objects[i]);
 		}
 		return preparedStatement;
+	}
+	
+	private static Utilisateur map(ResultSet resultSet) throws SQLException {
+		Utilisateur utilisateur = new Utilisateur();
+		utilisateur.setId(resultSet.getLong("id"));
+		utilisateur.setEmail(resultSet.getString("email"));
+		utilisateur.setMotDePasse(resultSet.getString("mot_de_passe"));
+		utilisateur.setNom(resultSet.getString("nom"));
+		utilisateur.setDateInscription(resultSet.getTimestamp("date_inscription"));
+		return utilisateur;
 	}
 	
 	public UtilisateurDaoImpl(DAOFactory daoFactory) {
