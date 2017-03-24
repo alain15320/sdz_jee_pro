@@ -5,7 +5,11 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.jasypt.util.password.ConfigurablePasswordEncryptor;
+
 import com.sdzee.beans.Utilisateur;
+import com.sdzee.dao.DAOException;
+import com.sdzee.dao.UtilisateurDao;
 
 public class InscriptionForm {
 
@@ -13,9 +17,16 @@ public class InscriptionForm {
 	public static final String CHAMP_PASS = "motdepasse";
 	public static final String CHAMP_CONF = "confirmation";
 	public static final String CHAMP_NOM = "nom";
+	private static final String ALGO_CHIFFREMENT = "SHA-256";
 
 	private String resultat;
 	private Map<String, String> erreurs = new HashMap<String, String>();
+
+	private UtilisateurDao utilisateurDao;
+
+	public InscriptionForm(UtilisateurDao utilisateurDao) {
+		this.utilisateurDao = utilisateurDao;
+	}
 
 	public String getResultat() {
 		return resultat;
@@ -35,28 +46,23 @@ public class InscriptionForm {
 		Utilisateur utilisateur = new Utilisateur();
 
 		try {
-			validationEmail(email);
-		} catch (Exception e) {
-			setErreur(CHAMP_EMAIL, e.getMessage());
-		}
-		utilisateur.setEmail(email);
+			traiterEmail(email, utilisateur);
+			traiterMotsDePasse(motDePasse, confirmation, utilisateur);
+			traiterNom(nom, utilisateur);
 
-		try {
-			validationMotsDePasse(motDePasse, confirmation);
-		} catch (Exception e) {
-			setErreur(CHAMP_PASS, e.getMessage());
-			setErreur(CHAMP_CONF, e.getMessage());
+			if (erreurs.isEmpty()) {
+				utilisateurDao.creer(utilisateur);
+				resultat = "Succès de l'inscription.";
+			} else {
+				resultat = "Echec de l'inscription";
+			}
+		} catch (DAOException e) {
+			resultat = "Échec de l'inscription : une erreur imprévue est survenue, merci de réessayer dans quelques instants.";
+			e.printStackTrace();
 		}
-		utilisateur.setMotDePasse(motDePasse);
-
-		try {
-			validationNom(nom);
-		} catch (Exception e) {
-			setErreur(CHAMP_NOM, e.getMessage());
-		}
-		utilisateur.setNom(nom);
 
 		if (erreurs.isEmpty()) {
+			utilisateurDao.creer(utilisateur);
 			resultat = "Succès de l'inscription";
 		} else {
 			resultat = "Echec de l'inscription";
@@ -65,13 +71,49 @@ public class InscriptionForm {
 		return utilisateur;
 	}
 
-	private void validationEmail(String email) throws Exception {
+	private void traiterEmail(String email, Utilisateur utilisateur) {
+		try {
+			validationEmail(email);
+		} catch (FormValidationException e) {
+			setErreur(CHAMP_EMAIL, e.getMessage());
+		}
+		utilisateur.setEmail(email);
+	}
+
+	private void traiterMotsDePasse(String motDePasse, String confirmation, Utilisateur utilisateur) {
+		try {
+			validationMotsDePasse(motDePasse, confirmation);
+		} catch (Exception e) {
+			setErreur(CHAMP_PASS, e.getMessage());
+			setErreur(CHAMP_CONF, e.getMessage());
+		}
+
+		ConfigurablePasswordEncryptor passwordEncryptor = new ConfigurablePasswordEncryptor();
+		passwordEncryptor.setAlgorithm(ALGO_CHIFFREMENT);
+		passwordEncryptor.setPlainDigest(false);
+		String motDePasseChiffre = passwordEncryptor.encryptPassword(motDePasse);
+		utilisateur.setMotDePasse(motDePasseChiffre);
+	}
+
+	private void traiterNom(String nom, Utilisateur utilisateur) {
+		try {
+			validationNom(nom);
+		} catch (Exception e) {
+			setErreur(CHAMP_NOM, e.getMessage());
+		}
+		utilisateur.setNom(nom);
+	}
+
+	private void validationEmail(String email) throws FormValidationException {
 		if (email != null) {
 			if (!email.matches("([^.@]+)(\\.[^.@]+)*@([^.@]+\\.)+([^.@]+)")) {
-				throw new Exception("Merci de saisir une adresse mail valide.");
+				throw new FormValidationException("Merci de saisir une adresse mail valide.");
+			} else if (utilisateurDao.trouver(email) != null) {
+				throw new FormValidationException(
+						"Cette adresse mail est déjà utilisée, merci d'en choisir une autre.");
 			}
 		} else {
-			throw new Exception("Merci de saisir une adresse mail.");
+			throw new FormValidationException("Merci de saisir une adresse mail.");
 		}
 	}
 
@@ -99,19 +141,19 @@ public class InscriptionForm {
 	private void setErreur(String champ, String message) {
 		erreurs.put(champ, message);
 	}
-	
+
 	/*
 	 * Méthode utilitaire qui retourne null si un champ est vide, et son contenu
 	 * sinon.
 	 */
 	private String getValeurChamp(HttpServletRequest request, String nomChamp) {
 		String valeur = request.getParameter(nomChamp);
-		if (valeur==null || valeur.trim().length()==0) {
+		if (valeur == null || valeur.trim().length() == 0) {
 			return null;
 		} else {
 			return valeur.trim();
 		}
 
-	}	
+	}
 
 }
