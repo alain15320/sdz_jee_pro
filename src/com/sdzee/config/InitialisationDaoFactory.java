@@ -6,7 +6,7 @@ import javax.servlet.ServletContextListener;
 
 import com.sdzee.dao.DAOFactory;
 
-public class InitialisationDAoFactory implements ServletContextListener {
+public class InitialisationDaoFactory implements ServletContextListener {
 
 	private static final String ATT_DAO_FACTORY = "daofactory";
 	private DAOFactory daoFactory;
